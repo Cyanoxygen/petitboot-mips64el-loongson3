@@ -1,0 +1,81 @@
+#! /bin/sh
+#
+# Find the firmware directory and bind mount to /lib/firmware.
+# This script is delibrately to be blocking otherwise GPU won't start up
+# properly.
+
+DAEMON="find-firmware"
+MNTDIR="/tmp/firmware"
+LOGFILE="/var/log/firmware-search.log"
+
+info() {
+	echo "$DAEMON: $@" >> "$LOGFILE"
+	echo "$DAEMON: $@" > /dev/kmsg
+}
+
+# shellcheck source=/dev/null
+[ -r "/etc/default/$DAEMON" ] && . "/etc/default/$DAEMON"
+
+wait_for_sys() {
+	count=0
+	# udev is absent during this time.
+	while true ; do
+		out="$(find /sys/block -mindepth 1 -maxdepth 1 -type l \( -name 'sd*' -or -name 'nvme*' \) )"
+		if [ -n "$out" ] ; then
+			return
+		fi
+		if [ "$count" == 60 ] ; then
+			return
+		fi
+		sleep 0.5
+		count=$(( count + 1 ))
+	done
+}
+
+is_real_dev() {
+	case "$1" in
+		sd*|nvme*|hd*|sr*)
+			return 0
+			;;
+		*)
+			return 1
+			;;
+	esac
+}
+
+search_for_firmware() {
+	wait_for_sys
+	mkdir -p "$MNTDIR" || return 1
+	if [ ! -d /lib/firmware ] ; then
+		mkdir -p /lib/firmware || return 1
+	fi
+	for dir in $(ls /sys/block) ; do
+		devname="$(basename $dir)"
+		if ! is_real_dev "$devname" ; then
+			continue
+		fi
+		for part in $(find /sys/block/$devname/ -type d -mindepth 1 -maxdepth 1 -name "$devname"'*') ; do
+			partname=$(basename $part)
+			info "Searching for firmwares in /dev/$partname"
+			mount /dev/"$partname" "$MNTDIR"
+			if [ -d "$MNTDIR"/lib/firmware ] ; then
+				info "Found firmware in /dev/$partname"
+				mount --bind "$MNTDIR"/lib/firmware /lib/firmware
+				return 0
+			fi
+			umount "$MNTDIR"
+		done
+	done
+	info "Firmware not found - GPU driver may not load"
+	return 0
+}
+
+case "$1" in
+	start|stop|restart|reload)
+		search_for_firmware
+		;;
+	*)
+		echo "Usage: $0 {start|stop|restart|reload}"
+		exit 1
+		;;
+esac

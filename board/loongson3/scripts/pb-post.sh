@@ -5,6 +5,10 @@ if [ ! -d "$TARGET_DIR" ] ; then
 	exit 1
 fi
 
+if [ ! -d "$TARGET_DIR"/usr/lib/firmware/amdgpu ] ; then
+	# Already moved, skip.
+	exit
+fi
 pushd "$TARGET_DIR"/usr/lib/firmware/amdgpu/
 
 rm aldebaran_*
@@ -29,5 +33,11 @@ rm vegam_*
 rm yellow_carp_*
 
 popd
+
+echo "Moving firmware out ..."
+mkdir -p "$BINARIES_DIR"/bundle/lib
+mv "$TARGET_DIR"/lib/firmware "$BINARIES_DIR"/bundle/lib
+# Make sure the mount point exists.
+mkdir "$TARGET_DIR"/lib/firmware
 
 sed -i -r -e 's/^(console|)::/null::/' "$TARGET_DIR/etc/inittab"
