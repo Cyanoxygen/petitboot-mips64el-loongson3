@@ -17,6 +17,9 @@ config BR2_PACKAGE_PETITBOOT
 	select BR2_PACKAGE_LIBXCRYPT if BR2_TOOLCHAIN_USES_GLIBC
 	select BR2_PACKAGE_NVME if ( BR2_powerpc || BR2_powerpc64 || BR2_powerpc64le )
 	select BR2_PACKAGE_POWERPC_UTILS if ( BR2_powerpc || BR2_powerpc64 || BR2_powerpc64le )
+	select BR2_PACKAGE_UTIL_LINUX_LIBMOUNT if !( BR2_powerpc || BR2_powerpc64 || BR2_powerpc64le || BR2_aarch64 )
+	select BR2_PACKAGE_UTIL_LINUX_LIBBLKID if !( BR2_powerpc || BR2_powerpc64 || BR2_powerpc64le || BR2_aarch64 )
+	select BR2_PACKAGE_UTIL_LINUX_MOUNT if !( BR2_powerpc || BR2_powerpc64 || BR2_powerpc64le || BR2_aarch64 )
 	select BR2_PACKAGE_UTIL_LINUX
 	select BR2_PACKAGE_UTIL_LINUX_AGETTY
 	help
