@@ -1,0 +1,87 @@
+From 2a5dd84a90f6eb65b43680fe4f35db10d595af78 Mon Sep 17 00:00:00 2001
+From: Xinhui Yang <cyan@cyano.uk>
+Date: Tue, 6 Jan 2026 00:29:03 +0800
+Subject: [PATCH 4/6] ui/ncurses: properly update menu labels in
+ pmenu_item_update()
+
+pmenu_item_update() takes care of updating the menu label. It does this
+by allocating a new (ncurses) menu item with the name provided. However,
+the **items array wasn't updated, referencing the already freed
+memory.
+
+This patch sets the userptr of the newly created menu item, and updates
+the element in the (struct pmenu *)->items[] array accordingly.
+
+Signed-off-by: Xinhui Yang <cyan@cyano.uk>
+---
+ ui/ncurses/nc-cui.c  | 7 ++++++-
+ ui/ncurses/nc-menu.c | 4 +++-
+ 2 files changed, 9 insertions(+), 2 deletions(-)
+
+diff --git a/ui/ncurses/nc-cui.c b/ui/ncurses/nc-cui.c
+index a479f95..4b93275 100644
+--- a/ui/ncurses/nc-cui.c
++++ b/ui/ncurses/nc-cui.c
+@@ -1062,6 +1062,7 @@ static int cui_boot_option_add(struct device *dev, struct boot_option *opt,
+ 			char *label = talloc_asprintf(item, _("Plugins (%u)"),
+ 					cui->n_plugins);
+ 			pmenu_item_update(item, label);
++			cui->main->items[j] = item->nci;
+ 			talloc_free(label);
+ 			break;
+ 		}
+@@ -1083,6 +1084,7 @@ static int cui_boot_option_add(struct device *dev, struct boot_option *opt,
+ 					char *label =  talloc_asprintf(menu, "%s%s",
+ 							tab, tmp->name ? : "Unknown Name");
+ 					pmenu_item_update(item, label);
++					cui->main->items[j] = item->nci;
+ 					talloc_free(label);
+ 					break;
+ 				}
+@@ -1435,8 +1437,10 @@ fallback:
+ 	/* This disconnects items array from menu. */
+ 	result = set_menu_items(cui->plugin_menu->ncm, NULL);
+ 
+-	if (result == E_OK)
++	if (result == E_OK) {
+ 		pmenu_item_update(item, cod->name);
++		cui->plugin_menu->items[i] = item->nci;
++	}
+ 
+ 	/* Re-attach the items array. */
+ 	result = set_menu_items(cui->plugin_menu->ncm, cui->plugin_menu->items);
+@@ -1497,6 +1501,7 @@ static int cui_plugins_remove(void *arg)
+ 			continue;
+ 		cui->n_plugins = 0;
+ 		pmenu_item_update(item, _("Plugins (0)"));
++		cui->main->items[i] = item->nci;
+ 		break;
+ 	}
+ 
+diff --git a/ui/ncurses/nc-menu.c b/ui/ncurses/nc-menu.c
+index 70f2210..96c2525 100644
+--- a/ui/ncurses/nc-menu.c
++++ b/ui/ncurses/nc-menu.c
+@@ -147,11 +147,14 @@ int pmenu_item_update(struct pmenu_item *item, const char *name)
+ 		talloc_free((char *)label);
+ 		return -1;
+ 	}
++
+ 	talloc_free((char *)item->label);
+ 	free_item(item->nci);
+ 	item->label = label;
+ 	item->nci = i;
+ 
++	set_item_userptr(item->nci, item);
++
+ 	return 0;
+ }
+ 
+@@ -630,4 +633,3 @@ int pmenu_setup(struct pmenu *menu)
+ 
+ 	return 0;
+ }
+-
+-- 
+2.52.0
+

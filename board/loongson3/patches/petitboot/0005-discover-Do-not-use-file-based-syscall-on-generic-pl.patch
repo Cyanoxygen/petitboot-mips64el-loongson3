@@ -1,0 +1,49 @@
+From 37efd3bf531fabc34796ab7c94862f30ca1ddd25 Mon Sep 17 00:00:00 2001
+From: Xinhui Yang <cyan@cyano.uk>
+Date: Tue, 5 Aug 2025 10:26:18 +0800
+Subject: [PATCH 5/6] discover: Do not use file-based syscall on generic
+ platforms
+
+- Even if some of them do support KEXEC_FILE_LOAD.
+- Also disable dtb loading for generic platforms.
+---
+ discover/boot.c | 9 +++++++--
+ 1 file changed, 7 insertions(+), 2 deletions(-)
+
+diff --git a/discover/boot.c b/discover/boot.c
+index 00507b7..9986a2b 100644
+--- a/discover/boot.c
++++ b/discover/boot.c
+@@ -61,7 +61,12 @@ static void __attribute__((format(__printf__, 4, 5))) update_status(
+  */
+ static int kexec_load(struct boot_task *boot_task)
+ {
++// Can't really determine if KEXEC_FILE_LOAD is available.
++#ifdef PLATFORM_GENERIC
++	const char *load_args[] = {"-l", "-c"};
++#else
+ 	const char *load_args[] = {"-l", "-s"};
++#endif
+ 	const struct system_info *sysinfo;
+ 	struct process *process;
+ 	char *s_initrd = NULL;
+@@ -129,14 +134,14 @@ static int kexec_load(struct boot_task *boot_task)
+ 		assert(s_initrd);
+ 		*p++ = s_initrd;	 /* 4 */
+ 	}
+-
++#ifndef PLATFORM_GENERIC
+ 	if (local_dtb) {
+ 		s_dtb = talloc_asprintf(boot_task, "--dtb=%s",
+ 						local_dtb);
+ 		assert(s_dtb);
+ 		*p++ = s_dtb;		 /* 5 */
+ 	}
+-
++#endif
+ 	s_args = talloc_asprintf(boot_task, "--append=%s",
+ 				boot_task->args ?: "\"\"");
+ 	assert(s_args);
+-- 
+2.52.0
+
