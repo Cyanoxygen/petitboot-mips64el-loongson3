@@ -14,6 +14,7 @@ BR2_ENABLE_LOCALE_WHITELIST="C en de es fr it ja ko pt ru vi zh_CN zh_TW"
 BR2_SYSTEM_ENABLE_NLS=y
 BR2_ROOTFS_OVERLAY="board/loongson3/overlays/petitboot"
 BR2_ROOTFS_POST_BUILD_SCRIPT="board/loongson3/scripts/pb-post.sh"
+BR2_ROOTFS_POST_IMAGE_SCRIPT="board/loongson3/scripts/pb-post-image.sh"
 BR2_LINUX_KERNEL=y
 BR2_LINUX_KERNEL_USE_CUSTOM_CONFIG=y
 BR2_LINUX_KERNEL_CUSTOM_CONFIG_FILE="board/loongson3/configs/pb-minimal.cfg"
